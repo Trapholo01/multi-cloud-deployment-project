@@ -3,7 +3,7 @@
 
 ###  Overview
 
-**AI Portfolio Assistant** is a web-based tool that helps users generate professional content for their portfolios using a **Generative AI API (Gemini)**.  
+**AI Portfolio Assistant** is a web-based tool that helpss users generate professional content for their portfolios using a **Generative AI API (Gemini)**.  
 It can create:
 
 *  Professional Bios  
