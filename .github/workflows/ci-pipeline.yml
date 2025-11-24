@@ -1,0 +1,25 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, feature/pipeline-complete ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-pipeline:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: List files
+      run: dir
+      
+    - name: Validate pipeline structure
+      run: |
+        echo "Validating pipeline files..."
+        if exist run-pipeline.bat (echo "✅ run-pipeline.bat found") else (exit 1)
+        if exist artifacts (echo "✅ artifacts directory found") else (echo "⚠️ artifacts missing")
+        echo "Pipeline structure validated"
