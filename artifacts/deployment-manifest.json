@@ -1,14 +1,13 @@
-﻿{
-    "pipeline": "multi-cloud-deployment-pipeline",
-    "timestamp": "' + (Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz") + '",
-    "status": "ready",
-    "artifacts": {
-        "backend": "ready",
-        "frontend": "ready"
-    },
-    "deployment_targets": [
-        "AWS Elastic Beanstalk",
-        "Azure App Service"
-    ],
-    "pipeline_author": "Pipeline Specialist"
+{
+  "pipeline": "multi-cloud-deployment-pipeline",
+  "timestamp": "2025-11-24",
+  "status": "ready",
+  "artifacts": {
+    "backend": "ready",
+    "frontend": "ready"
+  },
+  "deployment_targets": [
+    "AWS Elastic Beanstalk",
+    "Azure App Service"
+  ]
 }
