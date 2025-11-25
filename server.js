@@ -16,7 +16,21 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // ✅ ADDED: Root route to fix "Cannot GET /"
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+   res.sendFile(path.join(__dirname, "public", "index.html")); 
+});
+
+app.get('/api/info', (req, res) => {
+    res.json({
+        message: 'AI Content Generator Backend API is running!',
+        version: '1.0.0',
+        aiProvider: 'Google Gemini',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: 'GET /api/health',
+            generate: 'POST /api/generate',
+            history: 'GET /api/history'
+        }
+    });
 });
 
 // Health check endpoint
@@ -198,21 +212,6 @@ app.get('/api/stats', (req, res) => {
                 reflection: generatedContents.filter(item => item.type === 'reflection').length
             },
             serverUptime: process.uptime()
-        }
-    });
-});
-
-// ✅ ADDED: API information endpoint
-app.get('/api/info', (req, res) => {
-    res.json({
-        message: 'AI Content Generator Backend API is running!',
-        version: '1.0.0',
-        aiProvider: 'Google Gemini',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-            health: 'GET /api/health',
-            generate: 'POST /api/generate',
-            history: 'GET /api/history'
         }
     });
 });

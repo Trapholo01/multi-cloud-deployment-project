@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = ''; // Use relative URLs for same-server deployment
+const API_BASE_URL = 'https://avengers-2-1k-8.onrender.com';
 
 // State Management
 let currentTab = 'bio';
@@ -99,7 +99,7 @@ async function generateContent(formData) {
   copyBtn.style.display = 'none';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/generate`, {
+    const response = await fetch(`${API_BASE_URL}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -192,7 +192,7 @@ clearOutput();
 // Test backend connection on load
 async function testBackendConnection() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/health`);
+    const response = await fetch(`${API_BASE_URL}/health`);
     if (response.ok) {
       console.log('✅ Backend connection successful');
       showNotification('Connected to AI backend', 'success');
