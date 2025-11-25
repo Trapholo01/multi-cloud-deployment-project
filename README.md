@@ -6,11 +6,12 @@ A Node.js web application demonstrating deployment and CI/CD capabilities across
 
 This project demonstrates a complete multi-cloud DevOps workflow:
 - **Application**: Node.js/Express web server with static frontend (AI Content Generator)
+- **CI/CD**: **Azure Pipelines** (single pipeline deploys to both AWS and Azure)
 - **Cloud Platforms**: 
-  - **AWS**: CodePipeline → CodeBuild → Elastic Beanstalk
-  - **Azure**: Azure Pipelines → App Service (or Container Instances)
+  - **AWS**: Elastic Beanstalk
+  - **Azure**: App Service
 - **Testing**: Automated unit tests with Jest + Supertest
-- **Infrastructure**: CloudFormation (AWS) and Bicep/ARM templates (Azure)
+- **Infrastructure**: CloudFormation (AWS) and manual/scripted setup (Azure)
 - **Security**: 
   - AWS: IAM roles with least-privilege policies, Secrets Manager
   - Azure: Managed Identities, Key Vault integration
@@ -26,12 +27,14 @@ multi-cloud-deployment-project/
 │   └── Style.css
 ├── tests/                       # Unit tests
 │   └── health.test.js
-├── buildspec.yml                # CodeBuild build instructions
-├── cloudformation/              # Infrastructure as Code
-│   └── codepipeline.yml        # Full CI/CD pipeline stack
+├── azure-pipelines.yml          # Azure Pipelines configuration (deploys to both clouds)
+├── buildspec.yml                # CodeBuild build instructions (legacy)
+├── cloudformation/              # Infrastructure as Code (legacy)
+│   └── codepipeline.yml        # Full CI/CD pipeline stack (legacy)
 ├── package.json                 # Node.js dependencies
 ├── export-iam-roles.ps1        # IAM documentation script
-└── MANUAL-DEPLOYMENT.md        # Step-by-step deployment guide
+├── MANUAL-DEPLOYMENT.md        # Step-by-step AWS deployment guide
+└── AZURE-PIPELINES-SETUP.md    # Azure Pipelines multi-cloud setup guide
 ```
 
 ## 🛠️ Technologies Used
@@ -42,24 +45,21 @@ multi-cloud-deployment-project/
 - **Testing**: Jest, Supertest
 - **AI Integration**: Google Gemini API
 
+### CI/CD Platform
+- **Azure Pipelines**: Multi-cloud CI/CD orchestration (builds once, deploys to both AWS and Azure)
+- **Azure DevOps**: Pipeline management and GitHub integration
+
 ### AWS Services
-- **CodePipeline**: CI/CD orchestration
-- **CodeBuild**: Build and test automation
 - **Elastic Beanstalk**: Application hosting (Node.js platform)
-- **CodeStar Connections**: Secure GitHub integration
 - **S3**: Artifact storage
 - **Secrets Manager**: API key storage
 - **IAM**: Role-based access control
-- **CloudFormation**: Infrastructure provisioning
+- **CloudFormation**: Infrastructure provisioning (optional)
 
 ### Azure Services
-- **Azure Pipelines**: CI/CD automation
 - **Azure App Service**: Web app hosting (Node.js)
-- **Azure Container Instances** (alternative): Containerized deployment
 - **Azure Key Vault**: Secrets management
-- **Azure DevOps**: Source control and pipeline management
 - **Managed Identities**: Secure service-to-service authentication
-- **Bicep/ARM Templates**: Infrastructure as Code
 
 ## 📋 Prerequisites
 
@@ -77,27 +77,28 @@ multi-cloud-deployment-project/
 
 ## 🚀 Deployment Options
 
-### Option 1: AWS Deployment
-Follow the complete step-by-step guide in **[MANUAL-DEPLOYMENT.md](MANUAL-DEPLOYMENT.md)**
+### **Recommended: Azure Pipelines (Multi-Cloud)**
+Follow the complete step-by-step guide in **[AZURE-PIPELINES-SETUP.md](AZURE-PIPELINES-SETUP.md)**
 
-**Quick Steps (AWS):**
-1. Create CodeStar Connection for GitHub (AWS Console)
+**One pipeline deploys to both AWS and Azure:**
+1. Create Azure DevOps project and connect to GitHub
+2. Set up AWS infrastructure (Elastic Beanstalk, S3, Secrets Manager)
+3. Set up Azure infrastructure (App Service, Key Vault)
+4. Configure service connections (AWS and Azure)
+5. Set pipeline variables
+6. Push commit to trigger pipeline
+7. Watch pipeline deploy to both clouds automatically!
+
+**Deployment time**: ~15-20 minutes (both clouds)
+
+### **Alternative: AWS-Only Deployment (Legacy)**
+For AWS-only deployment using CodePipeline, follow **[MANUAL-DEPLOYMENT.md](MANUAL-DEPLOYMENT.md)**
+
+**Quick Steps (AWS CodePipeline):**
+1. Create CodeStar Connection for GitHub
 2. Store Gemini API key in Secrets Manager
 3. Create S3 bucket for artifacts
 4. Deploy CloudFormation stack (`cloudformation/codepipeline.yml`)
-5. Push commit to trigger pipeline
-6. Monitor execution in CodePipeline console
-
-**Deployment time**: ~10-15 minutes
-
-### Option 2: Azure Deployment
-Documentation for Azure deployment available in **azure/** directory (includes Bicep templates and pipeline YAML)
-
-**Quick Steps (Azure):**
-1. Create Azure DevOps project and connect to GitHub
-2. Store Gemini API key in Azure Key Vault
-3. Create Azure App Service or Container Instance
-4. Deploy pipeline configuration (azure-pipelines.yml)
 5. Push commit to trigger pipeline
 
 **Deployment time**: ~10-15 minutes
@@ -134,14 +135,29 @@ npm test
 
 Tests run automatically in the CI/CD pipeline during the Build stage.
 
-## 📊 Pipeline Stages
+## 📊 Pipeline Stages (Azure Pipelines)
 
-1. **Source**: Fetch code from GitHub (triggered by commits)
-2. **Build**: 
-   - Install dependencies (`npm ci`)
-   - Run tests (`npm test`)
-   - Package application (`app.zip`)
-3. **Deploy**: Deploy to Elastic Beanstalk environment
+### Stage 1: Build and Test
+- Install Node.js 18
+- Install dependencies (`npm ci`)
+- Run tests (`npm test`)
+- Package application (`app.zip`)
+- Publish artifact
+
+### Stage 2: Deploy to AWS
+- Download artifact
+- Upload to S3
+- Create Elastic Beanstalk version
+- Deploy to Elastic Beanstalk environment
+- Wait for deployment completion
+
+### Stage 3: Deploy to Azure
+- Download artifact
+- Deploy to Azure App Service
+- Configure Key Vault integration
+- Set environment variables
+
+**Single push → Both clouds deployed automatically!** 🚀
 
 ## 📸 IAM Role Documentation
 
@@ -216,13 +232,13 @@ After successful deployment:
 
 | Feature | AWS | Azure |
 |---------|-----|-------|
-| **CI/CD** | CodePipeline + CodeBuild | Azure Pipelines |
-| **Hosting** | Elastic Beanstalk | App Service / Container Instances |
+| **CI/CD** | Azure Pipelines (unified) | Azure Pipelines (unified) |
+| **Hosting** | Elastic Beanstalk | App Service |
 | **Secrets** | Secrets Manager | Key Vault |
 | **Identity** | IAM Roles | Managed Identities |
-| **IaC** | CloudFormation | Bicep / ARM Templates |
-| **Source Integration** | CodeStar Connections | Azure DevOps Git / GitHub Integration |
-| **Artifacts** | S3 | Azure Storage / Container Registry |
+| **IaC** | CloudFormation (optional) | Manual/Scripted Setup |
+| **Source Integration** | GitHub → Azure Pipelines | GitHub → Azure Pipelines |
+| **Artifacts** | S3 | Azure Pipelines Artifacts |
 
 **Why Multi-Cloud?**
 - **Vendor Independence**: Avoid lock-in to a single provider
@@ -253,5 +269,11 @@ MIT License - Feel free to use this project as a reference or starting point for
 
 ---
 
-**Author**: Trapholo01  
+## 👥 Team Members
+
+- **Lerato Matamela** - Pipelines & Documentation
+- **Thelezinhle Buthelezi** - AWS Deployment
+- **Thato Rapholo** - Azure Deployment
+
+**Sprint**: November 19-25, 2025 (1 week intensive)  
 **Repository**: [github.com/Trapholo01/multi-cloud-deployment-project](https://github.com/Trapholo01/multi-cloud-deployment-project)

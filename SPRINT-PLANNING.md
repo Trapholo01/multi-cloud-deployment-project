@@ -45,8 +45,9 @@ Complete full multi-cloud deployment with CI/CD pipelines, documentation, and te
      - Define Elastic Beanstalk application and environment
      - Create CodeBuild project with buildspec.yml
      - Configure CodePipeline (Source → Build → Deploy)
-     - ⚠️ **ATTEMPTED**: GitHub Actions integration (FAILED)
-     - **PIVOT**: Implement CodeStar Connections for GitHub
+     - ⚠️ **ATTEMPTED**: GitHub Actions integration (FAILED - billing constraints)
+     - **PIVOT 1**: Implement CodeStar Connections with AWS CodePipeline
+     - **PIVOT 2**: Transition to Azure Pipelines for multi-cloud deployment
      - Set up IAM roles with least-privilege policies
      - Configure S3 artifact bucket
      - Set up AWS Secrets Manager for Gemini API key
@@ -193,16 +194,21 @@ Complete full multi-cloud deployment with CI/CD pipelines, documentation, and te
      - Test secret retrieval in deployed environment
 
 - ❌ **What Didn't Work**: GitHub Actions initially planned for AWS CI/CD
+  - **Issue**: Billing constraints identified by Lerato Matamela
   - **Issue**: Complex AWS credential management
   - **Issue**: Long-lived access keys security concerns
-  - **Issue**: Manual secret rotation challenges
-  - **Owner**: Thelezinhle Buthelezi identified the issues
-- ✅ **What We Changed**: Pivoted to AWS CodePipeline with CodeStar Connections
+  - **Decision**: Team pivoted on Saturday, Nov 22
+- ✅ **Pivot 1**: AWS CodePipeline with CodeStar Connections
   - **Benefit**: Native AWS integration
   - **Benefit**: Secure GitHub App authentication
   - **Benefit**: No long-lived tokens required
-  - **Decision**: Made by team on Saturday, Nov 22
-- 📝 **Documentation**: Lerato Matamela documented the pivot and lessons learned
+- ✅ **Pivot 2**: Azure Pipelines for Multi-Cloud Deployment (Final Solution)
+  - **Benefit**: Single pipeline deploys to both AWS and Azure
+  - **Benefit**: Unified CI/CD management in Azure DevOps
+  - **Benefit**: Cost-effective with free tier for public repos
+  - **Benefit**: Cross-cloud deployment capability
+  - **Decision**: Finalized on Tuesday, Nov 25
+- 📝 **Documentation**: Lerato Matamela documented all pivots and lessons learned
 
 ---
 

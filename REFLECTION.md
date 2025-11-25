@@ -131,8 +131,20 @@ Additional technical challenges included:
    - Debugging pipeline failures was difficult
    - No native support for AWS services like Secrets Manager injection
 
-**The Pivot Decision**:
-After spending several hours troubleshooting GitHub Actions issues on Friday evening, **Lerato Matamela** identified the fundamental billing limitation that blocked progress. The team discussed options on Saturday morning (Nov 22) and made a crucial decision: **switch to AWS CodePipeline with CodeStar Connections**. This eliminated both the billing concerns and the security issues associated with GitHub Actions' AWS integration approach.
+**The Pivot Decisions**:
+After spending several hours troubleshooting GitHub Actions issues on Friday evening, **Lerato Matamela** identified the fundamental billing limitation that blocked progress. The team made two strategic pivots:
+
+**Pivot 1 (Saturday, Nov 22)**: Switch to AWS CodePipeline with CodeStar Connections
+- Eliminated billing concerns
+- Improved security with native AWS integration
+- Enabled faster AWS deployment
+
+**Pivot 2 (Tuesday, Nov 25)**: Transition to Azure Pipelines for Multi-Cloud Deployment
+- Single pipeline deploys to both AWS and Azure
+- Unified CI/CD management in Azure DevOps
+- Better multi-cloud orchestration
+- Cost-effective with free tier for public repositories
+- Simplified maintenance and monitoring
 
 **Why the Pivot Worked**:
 1. **No Billing Constraints**:
@@ -166,8 +178,14 @@ After spending several hours troubleshooting GitHub Actions issues on Friday eve
 - Result: No billing concerns, better security, cleaner architecture, easier maintenance
 - **Impact**: Despite the setback, AWS deployment completed on schedule (Nov 21-22)
 
-**Key Learning**: 
-> When deploying to a specific cloud platform, use that platform's native CI/CD tools rather than trying to force a "universal" solution. Cloud-native services exist for a reason—they're optimized for security, integration, ease of use, and often have better pricing models for platform-specific deployments. Billing constraints can be as significant a blocker as technical limitations.
+**Key Learnings**: 
+> 1. **Billing awareness is critical**: Understanding pricing models and constraints early can prevent major roadblocks. Lerato's identification of the billing limitation saved the project from extended delays.
+> 
+> 2. **Cloud-native tools have advantages**: Native CI/CD services often provide better integration, security, and cost-effectiveness than third-party universal solutions.
+> 
+> 3. **Multi-cloud orchestration tools exist**: Azure Pipelines (and similar tools) can deploy to multiple clouds from a single pipeline, simplifying multi-cloud architectures.
+> 
+> 4. **Be ready to pivot**: The team's willingness to change approaches twice (GitHub Actions → AWS CodePipeline → Azure Pipelines) led to the optimal solution.
 
 ### 2. Multi-Cloud Configuration Differences
 
