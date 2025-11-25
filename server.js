@@ -216,33 +216,38 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n ============================================== `);
-    console.log(` AI Content Generator Backend Started!`);
-    console.log(` AI Provider: Google Gemini`);
-    console.log(` Server running on: http://localhost:${PORT}`);
-    console.log(` Started at: ${new Date().toLocaleString()}`);
-    console.log(` ============================================== \n`);
+// Export the app for testing and optionally start the server when run directly
+module.exports = app;
 
-    console.log(' Available Endpoints:');
-    console.log('   ✅ GET  /              - API information');
-    console.log('   ✅ GET  /api/health    - Server health check');
-    console.log('   ✅ POST /api/generate  - Generate content (Gemini)');
-    console.log('   ✅ GET  /api/history   - Generation history');
-    console.log('   ✅ GET  /api/stats     - Server statistics\n');
+if (require.main === module) {
+    // Start server only when this file is run directly
+    app.listen(PORT, () => {
+        console.log(`\n ============================================== `);
+        console.log(` AI Content Generator Backend Started!`);
+        console.log(` AI Provider: Google Gemini`);
+        console.log(` Server running on: http://localhost:${PORT}`);
+        console.log(` Started at: ${new Date().toLocaleString()}`);
+        console.log(` ============================================== \n`);
 
-    // Check Gemini API key
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-        console.log('  WARNING: Gemini API key not configured!');
-        console.log('   Using mock data as fallback');
-        console.log('   Get free API key: https://aistudio.google.com/app/apikey');
-        console.log('   Add to .env file: GEMINI_API_KEY=your_actual_key_here\n');
-    } else {
-        console.log(' Gemini API key is configured!');
-    }
+        console.log(' Available Endpoints:');
+        console.log('   ✅ GET  /              - API information');
+        console.log('   ✅ GET  /api/health    - Server health check');
+        console.log('   ✅ POST /api/generate  - Generate content (Gemini)');
+        console.log('   ✅ GET  /api/history   - Generation history');
+        console.log('   ✅ GET  /api/stats     - Server statistics\n');
 
-    console.log(' Test the server: http://localhost:3000');
-    console.log(' Health check: http://localhost:3000/api/health\n');
-});
+        // Check Gemini API key
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+            console.log('  WARNING: Gemini API key not configured!');
+            console.log('   Using mock data as fallback');
+            console.log('   Get free API key: https://aistudio.google.com/app/apikey');
+            console.log('   Add to .env file: GEMINI_API_KEY=your_actual_key_here\n');
+        } else {
+            console.log(' Gemini API key is configured!');
+        }
+
+        console.log(' Test the server: http://localhost:3000');
+        console.log(' Health check: http://localhost:3000/api/health\n');
+    });
+}

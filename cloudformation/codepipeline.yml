@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline with GitHub source and CodeBuild project to run tests and package artifact
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: Branch to build
+  CodeStarConnectionArn:
+    Type: String
+    Description: ARN of an existing CodeStar Connections connection for GitHub (create in Console)
+  GitHubOAuthSecretName:
+    Type: String
+    Description: Secrets Manager secret name or ARN that contains the GitHub OAuth token as JSON with key 'token'
+  GeminiSecretName:
+    Type: String
+    Description: Secrets Manager secret name or ARN that contains the Gemini API key as JSON with key 'GEMINI_API_KEY'
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket to store pipeline artifacts
+  EBPlatform:
+    Type: String
+    Default: '64bit Amazon Linux 2 v3.4.12 running Node.js'
+    Description: Elastic Beanstalk platform SolutionStackName
+
+Resources:
+  PipelineArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ArtifactBucket
+
+  ElasticBeanstalkApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName: !Sub "${AWS::StackName}-eb-app"
+      Description: Elastic Beanstalk application for the web service
+
+  ElasticBeanstalkEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      ApplicationName: !Ref ElasticBeanstalkApplication
+      EnvironmentName: !Sub "${AWS::StackName}-eb-env"
+      SolutionStackName: !Ref EBPlatform
+      Tier:
+        Name: WebServer
+        Type: Standard
+      OptionSettings:
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: InstanceType
+          Value: t3.micro
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: CodeBuildSecretAndDeployAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GeminiSecretName}*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+              - Effect: Allow
+                Action:
+                  - elasticbeanstalk:CreateApplicationVersion
+                  - elasticbeanstalk:UpdateEnvironment
+                  - elasticbeanstalk:DescribeEnvironments
+                  - elasticbeanstalk:DescribeApplicationVersions
+                Resource:
+                  - !Sub "arn:aws:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:application/${AWS::StackName}-eb-app"
+                  - !Sub "arn:aws:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${AWS::StackName}-eb-app/*"
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}*"
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: multi-cloud-deployment-project-build
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.yml
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:6.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: GEMINI_API_KEY
+            Type: SECRETS_MANAGER
+            Value: !Ref GeminiSecretName
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodePipelineFullAccess
+      Policies:
+        - PolicyName: PipelineSecretAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GitHubOAuthSecretName}*"
+        - PolicyName: PipelineS3AndEBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+              - Effect: Allow
+                Action:
+                  - elasticbeanstalk:UpdateEnvironment
+                  - elasticbeanstalk:DescribeEnvironments
+                Resource:
+                  - !Sub "arn:aws:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${AWS::StackName}-eb-app/${AWS::StackName}-eb-env"
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}*"
+
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt PipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: CodeStar_Source
+                  ActionTypeId:
+                    Category: Source
+                    Owner: AWS
+                    Version: '1'
+                    Provider: CodeStarSourceConnection
+                  OutputArtifacts:
+                    - Name: SourceOutput
+                  Configuration:
+                    ConnectionArn: !Ref CodeStarConnectionArn
+                    FullRepositoryId: !Sub "${GitHubOwner}/${GitHubRepo}"
+                    Branch: !Ref GitHubBranch
+                  RunOrder: 1
+
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              RunOrder: 1
+
+        - Name: Deploy
+          Actions:
+            - Name: ElasticBeanstalk_Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ElasticBeanstalk
+                Version: '1'
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ApplicationName: !Sub "${AWS::StackName}-eb-app"
+                EnvironmentName: !Sub "${AWS::StackName}-eb-env"
+              RunOrder: 1
+
+Outputs:
+  PipelineName:
+    Description: Name of the created CodePipeline
+    Value: !Ref Pipeline

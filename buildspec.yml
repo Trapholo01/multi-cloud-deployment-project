@@ -1,0 +1,32 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo Installing source NPM dependencies
+      - npm ci
+
+  pre_build:
+    commands:
+      - echo Running unit tests
+      - npm test
+
+  build:
+    commands:
+      - echo Build phase - packaging artifact
+      - mkdir -p build
+      - cp -R public server.js package.json deploy.ps1 webhook-server.js build/
+      - cd build
+      - zip -r ../app.zip .
+      - cd ..
+
+artifacts:
+  files:
+    - app.zip
+  discard-paths: yes
+
+cache:
+  paths:
+    - node_modules/**
