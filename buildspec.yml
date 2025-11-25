@@ -17,7 +17,7 @@ phases:
     commands:
       - echo Build phase - packaging artifact
       - mkdir -p build
-      - cp -R public server.js package.json deploy.ps1 webhook-server.js build/
+      - cp -R public server.js package.json package-lock.json build/
       - cd build
       - zip -r ../app.zip .
       - cd ..

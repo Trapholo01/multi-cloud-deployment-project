@@ -81,6 +81,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
+                  - s3:PutObject
                 Resource: !Sub "arn:aws:s3:::${ArtifactBucket}/*"
               - Effect: Allow
                 Action:
@@ -143,6 +144,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
+                  - s3:PutObject
                 Resource: !Sub "arn:aws:s3:::${ArtifactBucket}/*"
               - Effect: Allow
                 Action:
@@ -166,18 +168,18 @@ Resources:
         - Name: Source
           Actions:
             - Name: CodeStar_Source
-                  ActionTypeId:
-                    Category: Source
-                    Owner: AWS
-                    Version: '1'
-                    Provider: CodeStarSourceConnection
-                  OutputArtifacts:
-                    - Name: SourceOutput
-                  Configuration:
-                    ConnectionArn: !Ref CodeStarConnectionArn
-                    FullRepositoryId: !Sub "${GitHubOwner}/${GitHubRepo}"
-                    Branch: !Ref GitHubBranch
-                  RunOrder: 1
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: '1'
+                Provider: CodeStarSourceConnection
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                ConnectionArn: !Ref CodeStarConnectionArn
+                FullRepositoryId: !Sub "${GitHubOwner}/${GitHubRepo}"
+                Branch: !Ref GitHubBranch
+              RunOrder: 1
 
         - Name: Build
           Actions:
