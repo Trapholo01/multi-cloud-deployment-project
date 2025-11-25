@@ -1,0 +1,163 @@
+# Azure Pipelines - Multi-Cloud Deployment
+# Deploys to both AWS Elastic Beanstalk and Azure App Service
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '18.x'
+  buildConfiguration: 'Release'
+
+stages:
+  # Stage 1: Build and Test
+  - stage: BuildAndTest
+    displayName: 'Build and Test Application'
+    jobs:
+      - job: Build
+        displayName: 'Build Node.js Application'
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: |
+              npm ci
+            displayName: 'Install Dependencies'
+
+          - script: |
+              npm test
+            displayName: 'Run Unit Tests'
+            env:
+              GEMINI_API_KEY: 'test-key-for-ci'
+
+          - task: ArchiveFiles@2
+            displayName: 'Create Deployment Package'
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+              replaceExistingArchive: true
+              verbose: true
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Artifact'
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/app.zip'
+              artifact: 'drop'
+              publishLocation: 'pipeline'
+
+  # Stage 2: Deploy to AWS
+  - stage: DeployToAWS
+    displayName: 'Deploy to AWS Elastic Beanstalk'
+    dependsOn: BuildAndTest
+    condition: succeeded()
+    jobs:
+      - deployment: DeployAWS
+        displayName: 'Deploy to AWS'
+        environment: 'aws-production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadPipelineArtifact@2
+                  displayName: 'Download Artifact'
+                  inputs:
+                    artifact: 'drop'
+                    path: '$(Pipeline.Workspace)'
+
+                - task: AWSShellScript@1
+                  displayName: 'Deploy to Elastic Beanstalk'
+                  inputs:
+                    awsCredentials: 'AWS-ServiceConnection'
+                    regionName: 'us-east-1'
+                    scriptType: 'inline'
+                    inlineScript: |
+                      # Variables
+                      APP_NAME="multi-cloud-ai-app"
+                      ENV_NAME="multi-cloud-ai-env"
+                      S3_BUCKET="$(AWS_S3_BUCKET)"
+                      VERSION_LABEL="v$(Build.BuildId)-$(Build.SourceVersion)"
+                      
+                      echo "Uploading application to S3..."
+                      aws s3 cp $(Pipeline.Workspace)/app.zip s3://$S3_BUCKET/$VERSION_LABEL.zip
+                      
+                      echo "Creating Elastic Beanstalk application version..."
+                      aws elasticbeanstalk create-application-version \
+                        --application-name $APP_NAME \
+                        --version-label $VERSION_LABEL \
+                        --source-bundle S3Bucket=$S3_BUCKET,S3Key=$VERSION_LABEL.zip \
+                        --description "Deployed from Azure Pipelines build $(Build.BuildId)"
+                      
+                      echo "Updating Elastic Beanstalk environment..."
+                      aws elasticbeanstalk update-environment \
+                        --application-name $APP_NAME \
+                        --environment-name $ENV_NAME \
+                        --version-label $VERSION_LABEL
+                      
+                      echo "Waiting for environment to update..."
+                      aws elasticbeanstalk wait environment-updated \
+                        --application-name $APP_NAME \
+                        --environment-name $ENV_NAME
+                      
+                      echo "AWS Deployment Complete!"
+
+  # Stage 3: Deploy to Azure
+  - stage: DeployToAzure
+    displayName: 'Deploy to Azure App Service'
+    dependsOn: BuildAndTest
+    condition: succeeded()
+    jobs:
+      - deployment: DeployAzure
+        displayName: 'Deploy to Azure'
+        environment: 'azure-production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadPipelineArtifact@2
+                  displayName: 'Download Artifact'
+                  inputs:
+                    artifact: 'drop'
+                    path: '$(Pipeline.Workspace)'
+
+                - task: AzureWebApp@1
+                  displayName: 'Deploy to Azure App Service'
+                  inputs:
+                    azureSubscription: 'Azure-ServiceConnection'
+                    appType: 'webAppLinux'
+                    appName: '$(AZURE_APP_NAME)'
+                    package: '$(Pipeline.Workspace)/app.zip'
+                    runtimeStack: 'NODE|18-lts'
+                    startUpCommand: 'node server.js'
+
+                - task: AzureAppServiceSettings@1
+                  displayName: 'Configure App Settings'
+                  inputs:
+                    azureSubscription: 'Azure-ServiceConnection'
+                    appName: '$(AZURE_APP_NAME)'
+                    resourceGroupName: '$(AZURE_RESOURCE_GROUP)'
+                    appSettings: |
+                      [
+                        {
+                          "name": "GEMINI_API_KEY",
+                          "value": "@Microsoft.KeyVault(SecretUri=$(KEYVAULT_SECRET_URI))",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "8080",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "NODE_ENV",
+                          "value": "production",
+                          "slotSetting": false
+                        }
+                      ]
